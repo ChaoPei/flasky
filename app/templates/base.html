@@ -1,6 +1,6 @@
 {% extends "bootstrap/base.html" %}
 
-{% block title %}Flasky{% endblock %}
+{% block title %}Parlefan{% endblock %}
 
 {% block head %}
 {{ super() }}
@@ -24,6 +24,15 @@
             <ul class="nav navbar-nav">
                 <li><a href="/">Home</a></li>
             </ul>
+			
+			<!--登录-->
+			<ul class="nav navbar-nav narbar-right">
+				{% if current_user.is_authenticated %}  <!--Login提供-->
+				<li><a href="{{ url_for('auth.logout') }}">Sign Out</a></li>
+				{% else %}
+				<li><a href="{{ url_for('auth.login') }}">Sign In</a></li>
+				{% endif %}
+			</ul>
         </div>
     </div>
 </div>

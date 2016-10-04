@@ -2,6 +2,7 @@
 
 '''
 使用蓝本来定义路由
+蓝本可以定义路由, 然后将蓝本注册到app中
 '''
 
 from flask import Blueprint
