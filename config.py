@@ -13,10 +13,10 @@ class Config:
     SQLALCHEMY_COMMIT_ON_TEARDOWN = True
     
     # 邮件设置  
-    FLASK_MAIL_SUBJECT_PREFIX = '[Flasky]'          # 邮件主题前缀
-    FLASK_MAIL_SENDER = 'peichao_hainu@163.com'     # 收件人
+    FLASKY_MAIL_SUBJECT_PREFIX = '[Flasky]'          # 邮件主题前缀
+    FLASKY_MAIL_SENDER = 'peichao_pku@163.com'     # 发件人
     FLASK_ADMIN = os.environ.get('FLASKY_ADMIN')
-    MAIL_SERVER = 'peichao_pku@163.com'             # 发件人
+    MAIL_SERVER = 'smtp.163.com'            # 邮件服务器
     MAIL_PORT = 25 #SSL 465
     MAIL_USR_TLS = True
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
@@ -29,7 +29,8 @@ class Config:
 # 部署配置
 class DevelopmentConfig(Config):
     DEBUG = True
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or 'sqlite:///' + os.path.join(basedir, 'data-dev.sqlite')
+    #SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or 'sqlite:///' + os.path.join(basedir, 'data-dev.sqlite')
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or 'mysql+pymysql://flask:admin@localhost:3306/web' # 使用pymysql来连接
 
 
 # 测试配置
