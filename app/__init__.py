@@ -43,7 +43,6 @@ def create_app(config_name):
     db.init_app(app)
     login_manager.init_app(app)   
     
-
     # 导入注册主蓝本
     from .main import main as main_blueprint    # 只能在db初始化后导入, 不然构成循环依赖
     app.register_blueprint(main_blueprint)
