@@ -14,6 +14,8 @@ from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from flask import current_app
 from . import db
 
+from datetime import datetime
+
 
 # 权限常量
 class Permission:
@@ -69,7 +71,14 @@ class User(UserMixin, db.Model):    # UserMixin实现了Flask-Login要求必须�
     password_hash = db.Column(db.String(128))   # 散列密码 
     confirmed = db.Column(db.Boolean, default=False) # 是否激活(邮件确认)
     
-    
+    # 用户资料页面字段
+    realname = db.Column(db.String(64))     # 真实姓名
+    location = db.Column(db.String(64))     # 位置
+    about_me = db.Column(db.Text())         # 关于
+    member_since = db.Column(db.DateTime(), default=datetime.utcnow)    # 注册时间
+    last_seen = db.Column(db.DateTime(), default=datetime.utcnow)       # 最后登录时间
+
+
     def __repr__(self):
         return '<User %r>' % self.username
  
@@ -162,6 +171,11 @@ class User(UserMixin, db.Model):    # UserMixin实现了Flask-Login要求必须�
     # 管理员权限
     def is_administrator(self):
         return self.can(Permission.ADMINISTER)
+
+    # 刷新用户最后访问时间
+    def ping(self):
+        self.last_seen = datetime.utcnow()
+        db.session.add(self)
 
 
 

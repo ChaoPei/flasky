@@ -74,8 +74,11 @@ def confirm(token):
 @auth.before_app_request    # 针对全局程序请求
 def before_request():
     # 用户已登录, 未激活, 访问非auth内的端点是不允许的
-    if current_user.is_authenticated and not current_user.confirmed and request.endpoint[:5] != 'auth.' and request.endpoint != 'static':
-        return redirect(url_for('auth.unconfirmed'))
+    if current_user.is_authenticated:
+        current_user.ping()     # 每次访问请求都刷新用户的最后访问时间
+        if not current_user.confirmed and request.endpoint[:5] != 'auth.':
+            return redirect(url_for('auth.unconfirmed'))
+
 
 
 # 未确认页面
