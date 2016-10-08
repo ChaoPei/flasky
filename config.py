@@ -15,7 +15,7 @@ class Config:
     # 邮件设置  
     FLASKY_MAIL_SUBJECT_PREFIX = '[Flasky]'          # 邮件主题前缀
     FLASKY_MAIL_SENDER = 'peichao_pku@163.com'     # 发件人
-    FLASK_ADMIN = os.environ.get('FLASKY_ADMIN')
+    FLASKY_ADMIN = os.environ.get('FLASKY_ADMIN')
     MAIL_SERVER = 'smtp.163.com'            # 邮件服务器
     MAIL_PORT = 25 #SSL 465
     MAIL_USR_TLS = True
