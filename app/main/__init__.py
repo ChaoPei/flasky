@@ -12,3 +12,7 @@ main = Blueprint('main', __name__)
 
 # 从当前目录导入路由和错误处理模块
 from . import views, errors
+
+@main.app_context_processor
+def inject_permissions():
+    return dict(Permission=Permission)
