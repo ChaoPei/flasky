@@ -4,56 +4,42 @@
 路由模块
 '''
 
-from datetime import datetime
-from flask import Flask, render_template, session, redirect, url_for, flash, abort
+from flask import Flask, render_template, session, redirect, url_for, flash, abort, current_app, request
 from flask_login import login_required, current_user
 from .. import db
 from . import main
-from .forms import NameForm, EditProfileForm, EditProfileAdminForm
-from ..models import User, Role
-from ..email import send_email
+from .forms import EditProfileForm, EditProfileAdminForm, PostForm
+from ..models import User, Role, Post, Permission
 from ..decorators import admin_required
 
 
-# 首页
-@main.route('/', methods=['GET', 'POST'])   # 装饰器由蓝本提供
+# 博客首页
+@main.route('/', methods=['GET', 'POST'])
 def index():
-    form = NameForm()
-    # POST请求
-    if form.validate_on_submit():
-        # 在数据库中查询用户名是否存在
-        user = User.query.filter_by(username=form.name.data).first()
-        if user is None:        
-            # 不存在则创建用户名
-            flash('Welcome to create new user !')
-            user = User(username=form.name.data)
-            db.session.add(user)
-            session['known'] = False
-            
-            # 发送邮件 
-            if current_app.config['FLASKY_ADMIN']:
-                send_email(current_app.config['FLASKY_ADMIN'], 'New User', 'mail/new_user', user=user)
+    form = PostForm()
+    if current_user.can(Permission.WRITE_ARTICLES) and form.validate_on_submit():
+        post = Post(body=form.body.data, author=current_user._get_current_object())
+        db.session.add(post)
+        return redirect(url_for('.index'))
 
-        else:
-            session['known'] = True
-            
-        
-        # 保存在session中 
-        session['name'] = form.name.data
-        # 重定向为GET请求
-        return redirect(url_for('.index'))      # 重定向url路径不一样, 使用蓝本的命名空间
-    
-    return render_template('index.html', form=form, name=session.get('name'),  
-                           known=session.get('known', False), current_time=datetime.utcnow())
+    page = request.args.get('page', 1, type=int)
+    pagination = Post.query.order_by(Post.timestamp.desc()).paginate(page, per_page=current_app.config['FLASKY_POSTS_PER_PAGE'], error_out=False)
+    posts = pagination.items
+    return render_template('index.html', form=form, posts=posts, pagination=pagination)
+
 
 
 # 用户资料页面
 @main.route('/user/<username>')
 def user(username):
-    user = User.query.filter_by(username=username).first()
+    user = User.query.filter_by(username=username).first_or_404()
     if user is None:
         abort(404)
-    return render_template('user.html', user=user)
+    
+    page = request.args.get('page', 1, type=int)
+    pagination = user.posts.order_by(Post.timestamp.desc()).paginate(page, per_page=current_app.config['FLASKY_POSTS_PER_PAGE'], error_out=False)
+    posts = pagination.items
+    return render_template('user.html', user=user, posts=posts, pagination=pagination)
 
 
 
@@ -74,6 +60,7 @@ def edit_profile():
     form.about_me.data = current_user.about_me
 
     return render_template('edit_profile.html', form=form)
+
 
 
 # 管理员编辑用户资料
@@ -103,6 +90,5 @@ def edit_profile_admin(id):     # 传入用户id
     form.about_me.data = user.about_me
 
     return render_template('edit_profile.html', form=form, user=user)
-
 
 

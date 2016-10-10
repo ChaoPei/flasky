@@ -11,12 +11,6 @@ from wtforms.validators import Required, Length, Email, Regexp
 from wtforms import ValidationError
 from ..models import Role, User
 
-# post名字单元
-class NameForm(Form):
-    
-    name = StringField('What is your name?', validators=[Required()])
-    submit = SubmitField('Submit')
-
 
 # 个人编辑资料 
 class EditProfileForm(Form):
@@ -57,3 +51,7 @@ class EditProfileAdminForm(Form):
                 User.query.filter_by(username=field.data).first():
             raise ValidationError('Username already in use.')
 
+# 编辑文章
+class PostForm(Form):
+    body = TextAreaField("what's on your mind ?", validators=[Required()])
+    submit = SubmitField('Submit')
