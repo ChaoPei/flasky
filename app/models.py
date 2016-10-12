@@ -10,6 +10,9 @@ from . import login_manager
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin, AnonymousUserMixin
 
+from markdown import markdown
+import bleach
+
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from flask import current_app, request
 from . import db
@@ -59,6 +62,16 @@ class Role(db.Model):
         db.session.commit()
 
 
+# 关注
+class Follow(db.Model):
+
+    __tablename__ = 'follows'
+
+    follower_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
+    followed_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+
 # 用户
 class User(UserMixin, db.Model):    # UserMixin实现了Flask-Login要求必须实现的用户方法
     
@@ -83,6 +96,19 @@ class User(UserMixin, db.Model):    # UserMixin实现了Flask-Login要求必须�
     
     # Post中author是一个user
     posts = db.relationship('Post', backref='author', lazy='dynamic')
+    
+    
+    # 一对多关系(关注了哪些人)
+    followed = db.relationship('Follow', foreign_keys=[Follow.follower_id], 
+                                backref=db.backref('follower', lazy='joined'),
+                                lazy='dynamic',
+                                cascade='all, delete-orphan')       # 父表和子表的同步关系
+    # 一对多关系(被哪些人关注)
+    followers = db.relationship('Follow', foreign_keys=[Follow.followed_id], 
+                                backref=db.backref('followed', lazy='joined'),
+                                lazy='dynamic',
+                                cascade='all, delete-orphan')
+
 
     def __repr__(self):
         return '<User %r>' % self.username
@@ -100,7 +126,11 @@ class User(UserMixin, db.Model):    # UserMixin实现了Flask-Login要求必须�
         # 缓存email hash
         if self.email is not None and self.avatar_hash is None:
             self.avatar_hash = hashlib.md5(self.email.encode('utf-8')).hexdigest()
-     
+        
+        # 默认关注自己
+        self.followed.append(Follow(followed=self))
+    
+    
     @property
     def password(self):
         raise AttributeError('password can not access!')
@@ -187,6 +217,7 @@ class User(UserMixin, db.Model):    # UserMixin实现了Flask-Login要求必须�
         self.last_seen = datetime.utcnow()
         db.session.add(self)
 
+
     # 生成头像url
     def gravatar(self, size=100, default='identicon', rating='g'):
         if request.is_secure:
@@ -196,6 +227,45 @@ class User(UserMixin, db.Model):    # UserMixin实现了Flask-Login要求必须�
         email_hash = self.avatar_hash or hashlib.md5(self.email.encode('utf-8')).hexdigest()
         return '{url}/{email_hash}?s={size}&d={default}&r={rating}'.format(url=url, email_hash=email_hash, size=size, default=default, rating=rating)
     
+    
+    '''关注关系的辅助方法'''
+    # 关注
+    def follow(self, user):
+        if not self.is_following(user):
+            f = Follow(follower=self, followed=user)
+            db.session.add(f)
+
+    # 取消关注
+    def unfollow(self, user):
+        f = self.followed.filter_by(followed_id=user.id).first()
+        if f:
+            db.session.delete(f)
+
+    # 查询是否正在关注
+    def is_following(self, user):
+        return self.followed.filter_by(followed_id=user.id).first() is not None
+
+    # 查询是否被关注
+    def is_followed_by(self, user):
+        return self.followers.filter_by(follower_id=user.id).first() is not None
+    
+    # 获取所关注用户的文章
+    @property
+    def followed_posts(self):
+        return Post.query.join(     # 使用联合查询
+                Follow, Follow.followed_id== Post.author_id).filter(    # 在Post表和Follow表中查询followed_id和author_id对应的rows
+                        Follow.follower_id == self.id)                  # follower_id为self.id
+
+    # 关注自己
+    @staticmethod
+    def add_self_follows():
+        for user in User.query.all():
+            if not user.is_following(user):
+                user.follow(user)
+                db.session.add(user)
+                db.session.commit()
+
+
     # 生成虚拟数据(开发测试)
     @staticmethod
     def generate_fake(count=100):
@@ -226,10 +296,11 @@ class Post(db.Model):
     __tablename__ = 'posts'
     
     id = db.Column(db.Integer, primary_key=True);
-    body = db.Column(db.Text)
+    body = db.Column(db.Text)                       # 存放的MarkDown纯文本
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    
+    body_html = db.Column(db.Text)                  # 存放MarkDown文本对应的HTML格式
+
     # 生成虚拟数据
     @staticmethod
     def generate_fake(count=100):
@@ -245,6 +316,21 @@ class Post(db.Model):
                      author=u)
             db.session.add(p)
             db.session.commit()
+    
+    @staticmethod
+    def on_changed_body(target, value, oldvalue, initiator):        # 监听body字段, 如果body字段更新, 函数自动被调用
+        # 允许存在的html标签
+        allowed_tags = ['a', 'abbr', 'acronym', 'b', 'blockquote', 'code',
+                        'em', 'i', 'li', 'ol', 'pre', 'strong', 'ul', 'h1', 
+                        'h2', 'h3', 'p']
+        target.body_html = bleach.linkify(bleach.clean( # 清除所有允许存在的tags # linkify将纯文本的url生成连接
+            markdown(value, output_format='html'),      # markdown函数将(表单提交的)Markdown文本转换成HTML
+            tags=allowed_tags, strip=True))
+
+
+
+# 注册Post类body字段的监听函数
+db.event.listen(Post.body, 'set', Post.on_changed_body)
 
 
 

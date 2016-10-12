@@ -4,7 +4,7 @@
 表单类型定义
 '''
 
-
+from flask_pagedown.fields import PageDownField
 from flask_wtf import Form
 from wtforms import StringField, SubmitField, TextAreaField, BooleanField, SelectField
 from wtforms.validators import Required, Length, Email, Regexp
@@ -53,5 +53,5 @@ class EditProfileAdminForm(Form):
 
 # 编辑文章
 class PostForm(Form):
-    body = TextAreaField("what's on your mind ?", validators=[Required()])
+    body = PageDownField("what's on your mind ?", validators=[Required()])  # markdown文本编辑器
     submit = SubmitField('Submit')

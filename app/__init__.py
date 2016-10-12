@@ -12,7 +12,7 @@ from flask_moment import Moment
 from flask_sqlalchemy import SQLAlchemy     # 数据库   
 from flask_mail import Mail                 # 邮件系统
 from flask_login import LoginManager        # 登录认证
-
+from flask_pagedown import PageDown         # 富文本编辑
 
 # 导入配置
 from config import config
@@ -26,6 +26,7 @@ db = SQLAlchemy()
 login_manager = LoginManager()
 login_manager.session_protection = 'login'
 login_manager.login_view = 'auth.login'
+pagedown = PageDown()
 
 
 # 创建app并绑定扩展
@@ -42,13 +43,13 @@ def create_app(config_name):
     moment.init_app(app)
     db.init_app(app)
     login_manager.init_app(app)   
-    
-    # 导入注册主蓝本
+    pagedown.init_app(app)
+
+    # 导入主蓝本
     from .main import main as main_blueprint    # 只能在db初始化后导入, 不然构成循环依赖
     app.register_blueprint(main_blueprint)
     
-
-    # 导入注册认证蓝本
+    # 导入认证系统蓝本
     from .auth import auth as auth_blueprint
     app.register_blueprint(auth_blueprint, url_prefix='/auth')
 
