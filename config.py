@@ -12,6 +12,8 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'l love zhangfan'  # 私密配置从环境变量导入
     SQLALCHEMY_COMMIT_ON_TEARDOWN = True
     FLASKY_POSTS_PER_PAGE = 20  # 每页展示文章数量
+    FLASKY_FOLLOWERS_PER_PAGE = 20  # 每页展示follows数量
+
 
     # 邮件设置  
     FLASKY_MAIL_SUBJECT_PREFIX = '[Flasky]'          # 邮件主题前缀
