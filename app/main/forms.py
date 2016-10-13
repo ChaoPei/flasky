@@ -55,3 +55,8 @@ class EditProfileAdminForm(Form):
 class PostForm(Form):
     body = PageDownField("what's on your mind ?", validators=[Required()])  # markdown文本编辑器
     submit = SubmitField('Submit')
+
+# 评论
+class CommentForm(Form):
+    body = StringField('Enter your comment', validators=[Required()])
+    submit = SubmitField('Submit')

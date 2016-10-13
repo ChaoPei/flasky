@@ -14,7 +14,7 @@ from markdown import markdown
 import bleach
 
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
-from flask import current_app, request
+from flask import current_app, request, url_for
 from . import db
 
 from datetime import datetime
@@ -107,7 +107,10 @@ class User(UserMixin, db.Model):    # UserMixin实现了Flask-Login要求必须�
     followers = db.relationship('Follow', foreign_keys=[Follow.followed_id], 
                                 backref=db.backref('followed', lazy='joined'),
                                 lazy='dynamic',
-                                cascade='all, delete-orphan')
+                               cascade='all, delete-orphan')
+    
+    # 评论是一对多
+    comments = db.relationship('Comment', backref='author', lazy='dynamic')
 
 
     def __repr__(self):
@@ -300,6 +303,9 @@ class Post(db.Model):
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     body_html = db.Column(db.Text)                  # 存放MarkDown文本对应的HTML格式
+    
+    # 文章和评论是一对多关系
+    comments = db.relationship('Comment', backref='post', lazy='dynamic')
 
     # 生成虚拟数据
     @staticmethod
@@ -329,8 +335,32 @@ class Post(db.Model):
 
 
 
-# 注册Post类body字段的监听函数
+# 发表评论
+class Comment(db.Model):
+    
+    __tablename__ = 'comments'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    body = db.Column(db.Text)
+    body_html = db.Column(db.Text)
+    timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
+    disabled = db.Column(db.Boolean)    # 是否显示评论
+    author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
+
+    @staticmethod
+    def on_changed_body(target, value, oldvalue, initiator):
+        allowed_tags = ['a', 'abbr', 'acronym', 'b', 'code', 'em', 'i',
+                        'strong']
+        target.body_html = bleach.linkify(bleach.clean(
+            markdown(value, output_format='html'),
+            tags=allowed_tags, strip=True))
+    
+
+
+# 注册Post和Comment类body字段的监听函数
 db.event.listen(Post.body, 'set', Post.on_changed_body)
+db.event.listen(Comment.body, 'set', Comment.on_changed_body)
 
 
 
