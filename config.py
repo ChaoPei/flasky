@@ -13,6 +13,7 @@ class Config:
     SQLALCHEMY_COMMIT_ON_TEARDOWN = True
     FLASKY_POSTS_PER_PAGE = 20  # 每页展示文章数量
     FLASKY_FOLLOWERS_PER_PAGE = 20  # 每页展示follows数量
+    FLASKY_COMMENTS_PER_PAGE = 20  # 每页展示follows数量
 
 
     # 邮件设置  
